@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Letter Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom styles to ensure no vertical scroll and better mobile experience */
+        body {
+            font-family: 'Inter', sans-serif; /* Fallback, but canvas uses specific fonts */
+            overflow: hidden; /* Prevent vertical scrolling on the body */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure it takes full viewport height */
+            background-color: #f0f4f8;
+            margin: 0; /* Remove default body margin */
+            padding: 0; /* Remove default body padding */
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh; /* Full viewport height for the container */
+            overflow-y: auto; /* Allow scrolling within the container if content exceeds height */
+            padding: 0; /* Remove container padding */
+            box-sizing: border-box;
+        }
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row; /* Side-by-side on larger screens */
+                overflow-y: hidden; /* No vertical scroll on larger screens */
+            }
+        }
+        .form-section, .preview-section {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto; /* Allow scrolling within sections if content is too long */
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+        .form-section {
+            margin-bottom: 0; /* Remove margin between form and preview on small screens */
+            /* Removed max-height: 50vh; */
+        }
+        @media (min-width: 768px) {
+            .form-section {
+                margin-right: 0; /* Remove margin between sections on larger screens */
+                margin-bottom: 0;
+                /* Removed max-height: none; */
+            }
+        }
+        canvas {
+            border: 1px solid #cbd5e0;
+            background-color: #ffffff;
+            display: block;
+            max-width: 100%;
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 0; /* Remove rounded corners */
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: 0; /* Remove rounded corners */
+        }
+        /* Styles for the toggle switch */
+        .toggle-label {
+            transition: background-color 0.2s ease-in-out;
+            position: relative;
+        }
+        .toggle-label::before {
+            content: '';
+            position: absolute;
+            display: block;
+            width: 50%;
+            height: 100%;
+            background-color: #3B82F6; /* Blue for Leave */
+            border-radius: 0.375rem; /* Decreased roundness: rounded-md */
+            transition: transform 0.2s ease-in-out;
+            left: 0;
+        }
+        #absenceTypeSwitch:checked + .toggle-label::before {
+            background-color: #22C55E; /* Green for Day Off */
+            transform: translateX(100%);
+        }
+        .toggle-text {
+            pointer-events: none; /* Allow clicks to pass through to the checkbox */
+            text-align: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0.75rem; /* px-3 */
+            color: white;
+            font-weight: bold;
+            font-size: 0.875rem; /* text-sm */
+        }
+        .toggle-text span:first-child { /* "Leave" text */
+            opacity: 1;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #absenceTypeSwitch:checked ~ .toggle-text span:first-child {
+            opacity: 0;
+        }
+        .toggle-text span:last-child { /* "Day Off" text */
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        #absenceTypeSwitch:checked ~ .toggle-text span:last-child {
+            opacity: 1;
+        }
+        /* Custom style to remove default dropdown arrow for select elements */
+        select.no-arrow {
+            -webkit-appearance: none; /* For iOS Safari */
+            -moz-appearance: none;    /* For Firefox */
+            appearance: none;         /* Standard property */
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpolygon%20points%3D%22225.813%2C48.907%20128%2C146.72%2030.187%2C48.907%200%2C79.093%20128%2C207.093%20256%2C79.093%20225.813%2C48.907%22%3E%2Fpolygon%3E%3C%2Fsvg%3E'); /* Transparent SVG to hide native arrow */
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 0.8em auto;
+            padding-right: 2.5rem; /* Ensure enough padding for the custom background to cover the arrow */
+        }
+        select.no-arrow::-ms-expand { /* For IE/Edge */
+            display: none;
+        }
+        /* Style for all placeholders */
+        ::placeholder {
+            color: #000000; /* Black color for all placeholders */
+            opacity: 1; /* Ensure placeholder is not transparent */
+        }
+        /* Style for the disabled/hidden option in select to act as placeholder */
+        select option[disabled][selected] {
+            color: #000000; /* Black color for select placeholder */
+        }
+        /* Ensure select text color is black when placeholder is active */
+        select:required:invalid {
+            color: #000000;
+        }
+        /* Ensure select text color is black when a valid option is selected */
+        select:required:valid {
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container bg-white md:flex-row md:max-w-full md:h-full">
+        <!-- Form Section -->
+        <div id="formSection" class="form-section p-6 bg-gray-50 flex flex-col">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Leave Details</h2>
+
+            <!-- Type of Absence Switch - Label above, switch centered below -->
+            <div class="mb-6 flex flex-col items-center">
+                <label class="block text-lg font-semibold text-gray-800 mb-2 text-center">Select Absence Type:</label>
+                <div class="relative inline-block w-36 h-10 select-none transition duration-200 ease-in-out">
+                    <input type="checkbox" id="absenceTypeSwitch" name="absenceTypeSwitch" class="absolute block w-full h-full cursor-pointer opacity-0 z-10">
+                    <label for="absenceTypeSwitch" class="toggle-label block overflow-hidden cursor-pointer rounded-md bg-gray-300 h-full shadow-inner"></label>
+                    <div class="toggle-text">
+                        <span>Leave</span>
+                        <span>Day Off</span>
+                    </div>
+                </div>
+            </div>
+            <!-- End Type of Absence Switch -->
+
+            <form id="leaveForm" class="space-y-4 flex-grow">
+                <div class="flex flex-col sm:flex-row sm:space-x-4">
+                    <div class="flex-1 mb-4 sm:mb-0">
+                        <input type="text" id="name" name="name" required placeholder="Name"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div class="flex-1">
+                        <select id="sex" name="sex" required
+                                class="no-arrow mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="" disabled selected hidden>Select Sex</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:space-x-4">
+                    <div class="flex-1 mb-4 sm:mb-0">
+                        <input type="text" id="position" name="position" required placeholder="Position"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    <div class="flex-1">
+                        <input type="number" id="absence" name="absence" min="1" required placeholder="Absence Days"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+                <!-- Start Date field -->
+                <div class="flex items-center">
+                    <label for="startDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">Start Date:</label>
+                    <input type="date" id="startDate" name="startDate" required
+                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <!-- To Date field -->
+                <div class="flex items-center">
+                    <label for="toDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">To Date:</label>
+                    <input type="date" id="toDate" name="toDate" required
+                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <!-- Back to Work Date field -->
+                <div class="flex items-center">
+                    <label for="backDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">Back to Work Date:</label>
+                    <input type="date" id="backDate" name="backDate" required
+                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <input type="text" id="reason" name="reason" required placeholder="Reason for absence"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <button type="button" id="previewBtn"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md flex items-center justify-center space-x-2">
+                    <i class="fas fa-eye w-5 h-5"></i>
+                    <span>Preview</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="previewSection" class="preview-section p-6 bg-white flex flex-col items-center justify-center hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Preview</h2>
+            <div id="loadingOverlay" class="loading-overlay hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+            </div>
+            <canvas id="letterCanvas" class="w-full h-auto max-h-full"></canvas>
+            <div class="mt-4 w-full flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <a id="downloadLink" download="leave_letter.png"
+                   class="inline-flex items-center justify-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md text-center">
+                    <i class="fas fa-download w-5 h-5 mr-2"></i>
+                    <span>Download</span>
+                </a>
+                <button type="button" id="shareBtn"
+                        class="inline-flex items-center justify-center bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md">
+                    <i class="fas fa-share-alt w-5 h-5 mr-2"></i>
+                    <span>Share</span>
+                </button>
+                <button type="button" id="backToFormBtn"
+                        class="inline-flex items-center justify-center bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md">
+                    <i class="fas fa-arrow-left w-5 h-5 mr-2"></i>
+                    <span>Back to Form</span>
+                </button>
+            </div>
+            <div id="shareMessage" class="mt-4 text-sm text-gray-600 hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const formSection = document.getElementById('formSection');
+            const previewSection = document.getElementById('previewSection');
+            const previewBtn = document.getElementById('previewBtn');
+            const letterCanvas = document.getElementById('letterCanvas');
+            const downloadLink = document.getElementById('downloadLink');
+            const shareBtn = document.getElementById('shareBtn');
+            const backToFormBtn = document.getElementById('backToFormBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const shareMessage = document.getElementById('shareMessage');
+            const ctx = letterCanvas.getContext('2d');
+
+            // Function to convert Arabic numerals to Khmer numerals
+            const convertToKhmerNumerals = (num) => {
+                const arabicNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                const khmerNumerals = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+                return String(num).split('').map(digit => {
+                    const index = arabicNumerals.indexOf(digit);
+                    return index !== -1 ? khmerNumerals[index] : digit;
+                }).join('');
+            };
+
+            // Function to format dates with Khmer numerals
+            const formatKhmerDate = (dateString) => {
+                const date = new Date(dateString);
+                const day = convertToKhmerNumerals(date.getDate().toString().padStart(2, '0'));
+                const year = convertToKhmerNumerals(date.getFullYear());
+                const monthNamesKhmer = [
+                    "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
+                    "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"
+                ];
+                const month = monthNamesKhmer[date.getMonth()];
+                return `${day}.${month}.${year}`;
+            };
+
+            // Function to wrap text for the reason field
+            const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
+                const words = text.split(' ');
+                let line = '';
+                let currentY = y;
+
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, x, currentY);
+                        line = words[n] + ' ';
+                        currentY += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                context.fillText(line, x, currentY);
+                return currentY; // Return the new Y position after drawing
+            };
+
+            const generateLetterImage = () => {
+                loadingOverlay.classList.remove('hidden'); // Show loading overlay
+                downloadLink.classList.add('hidden'); // Hide download link initially
+                shareBtn.classList.add('hidden'); // Hide share button initially
+                backToFormBtn.classList.add('hidden'); // Hide back button initially
+                shareMessage.classList.add('hidden'); // Hide share message
+
+                // Get form values
+                const name = document.getElementById('name').value;
+                const sex = document.getElementById('sex').value;
+                const position = document.getElementById('position').value;
+                const absence = document.getElementById('absence').value;
+                const startDate = document.getElementById('startDate').value; // Get raw date string for formatting
+                const toDate = document.getElementById('toDate').value;     // Get raw date string for formatting
+                const backDate = document.getElementById('backDate').value; // Get raw date string for formatting
+                const reason = document.getElementById('reason').value;
+                
+                // Get absence type from the new switch
+                const absenceTypeSwitch = document.getElementById('absenceTypeSwitch');
+                const absenceType = absenceTypeSwitch.checked ? 'Day Off' : 'Leave';
+
+                // Determine header color
+                let headerColor;
+                if (absenceType === 'Leave') {
+                    headerColor = '#3B82F6'; // Tailwind blue-500
+                } else {
+                    headerColor = '#22C55E'; // Tailwind green-500
+                }
+
+                // Define a scaling factor for higher quality
+                const scaleFactor = 2; // Render at 2x resolution
+
+                // Set canvas dimensions (scaled for higher quality)
+                const canvasWidth = 720 * scaleFactor;
+                const canvasHeight = 760 * scaleFactor;
+                letterCanvas.width = canvasWidth;
+                letterCanvas.height = canvasHeight;
+
+                // Ensure the canvas is displayed at its original size but rendered at higher res
+                letterCanvas.style.width = (canvasWidth / scaleFactor) + 'px';
+                letterCanvas.style.height = (canvasHeight / scaleFactor) + 'px';
+
+
+                // Clear canvas and set background
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                // Draw header rectangle
+                const headerHeight = 80 * scaleFactor;
+                ctx.fillStyle = headerColor;
+                ctx.fillRect(0, 0, canvasWidth, headerHeight);
+
+                // Set text properties for header (scaled font size)
+                ctx.fillStyle = '#ffffff'; // White text for header
+                ctx.font = `${36 * scaleFactor}px "Moul", "Inter", sans-serif`; // Changed to Moul
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${absenceType === 'Leave' ? 'លិខិតសុំច្បាប់' : 'ពាក្យសុំច្បាប់ឈប់សម្រាក'}`, canvasWidth / 2, headerHeight / 2);
+
+
+                // Set text properties for body content (scaled font size)
+                ctx.fillStyle = '#333333';
+                ctx.font = `${24 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
+                ctx.textBaseline = 'top';
+
+                const margin = 50 * scaleFactor;
+                let yPos = headerHeight + margin; // Start content below the header
+                const lineHeight = 30 * scaleFactor; // Adjusted for Khmer script
+                const paragraphSpacing = 20 * scaleFactor;
+
+                // Current Date (Khmer format)
+                const currentDateKhmer = formatKhmerDate(new Date().toISOString().slice(0,10)); // Get today's date in YYYY-MM-DD format first
+                ctx.font = `${20 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
+                ctx.textAlign = 'right';
+                ctx.fillText(`ថ្ងៃខែឆ្នាំ: ${currentDateKhmer}`, canvasWidth - margin, yPos);
+                yPos += lineHeight * 2;
+
+                ctx.textAlign = 'left';
+                ctx.font = `${22 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
+                ctx.fillText('សូមគោរពជូនលោកប្រធាន/នាយក', margin, yPos);
+                yPos += lineHeight * 1.5;
+
+                // Dynamic Name, Sex, Position
+                const genderPrefix = sex === 'Male' ? 'ខ្ញុំបាទ' : (sex === 'Female' ? 'នាងខ្ញុំ' : '');
+                ctx.fillText(`ឈ្មោះ/នាមត្រកូល: ${name}`, margin, yPos);
+                yPos += lineHeight;
+                ctx.fillText(`ភេទ: ${sex}`, margin, yPos);
+                yPos += lineHeight;
+                ctx.fillText(`តួនាទី: ${position}`, margin, yPos);
+                yPos += lineHeight + paragraphSpacing;
+
+                // Main body of the letter in Khmer
+                ctx.fillText(`${genderPrefix} សូមអនុញ្ញាតឈប់សម្រាកចំនួន ${convertToKhmerNumerals(absence)} ថ្ងៃ។`, margin, yPos);
+                yPos += lineHeight;
+
+                ctx.fillText(`ចាប់ពីថ្ងៃទី: ${formatKhmerDate(startDate)}`, margin, yPos);
+                yPos += lineHeight;
+                ctx.fillText(`ដល់ថ្ងៃទី: ${formatKhmerDate(toDate)}`, margin, yPos);
+                yPos += lineHeight;
+                ctx.fillText(`ចូលធ្វើការវិញថ្ងៃទី: ${formatKhmerDate(backDate)}`, margin, yPos);
+                yPos += lineHeight + paragraphSpacing;
+
+                const reasonIntro = `មូលហេតុ:`;
+                ctx.fillText(reasonIntro, margin, yPos);
+                yPos += lineHeight;
+
+                // Wrap and draw the reason text
+                const reasonMaxWidth = canvasWidth - (2 * margin);
+                const reasonLineHeight = 25 * scaleFactor; // Slightly smaller line height for reason
+                yPos = wrapText(ctx, reason, margin, yPos, reasonMaxWidth, reasonLineHeight);
+                yPos += paragraphSpacing * 2;
+
+                // Closing remarks
+                ctx.fillText('សេចក្តីដូចបានជម្រាបជូនខាងលើ សូមលោកប្រធាន/នាយក មេត្តាអនុញ្ញាតដោយក្តីអនុគ្រោះ។', margin, yPos);
+                yPos += lineHeight * 2;
+                ctx.fillText('សូមលោកប្រធាន/នាយក ទទួលការគួរសមដ៏ខ្ពង់ខ្ពស់ពីខ្ញុំបាទ/នាងខ្ញុំ។', margin, yPos);
+                yPos += lineHeight * 3;
+
+                ctx.textAlign = 'right';
+                ctx.fillText(`ដោយសេចក្តីគោរព`, canvasWidth - margin, yPos);
+                yPos += lineHeight;
+                ctx.fillText(`${name}`, canvasWidth - margin, yPos); // Name at the end
+                yPos += lineHeight;
+                ctx.fillText(`${position}`, canvasWidth - margin, yPos); // Position at the end
+
+
+                // After drawing, convert to image and display
+                try {
+                    const dataURL = letterCanvas.toDataURL('image/png');
+                    downloadLink.href = dataURL;
+                    downloadLink.classList.remove('hidden'); // Show download link
+                    shareBtn.classList.remove('hidden'); // Show share button
+                    backToFormBtn.classList.remove('hidden'); // Show back button
+                } catch (error) {
+                    console.error("Error generating image:", error);
+                    shareMessage.textContent = "Failed to generate image. Please try again.";
+                    shareMessage.classList.remove('hidden');
+                } finally {
+                    loadingOverlay.classList.add('hidden'); // Hide loading overlay
+                }
+            };
+
+            // Event Listener for the Preview Button
+            previewBtn.addEventListener('click', () => {
+                if (document.getElementById('leaveForm').checkValidity()) {
+                    formSection.classList.add('hidden');
+                    previewSection.classList.remove('hidden');
+                    generateLetterImage();
+                } else {
+                    // Trigger browser's default validation UI
+                    document.getElementById('leaveForm').reportValidity();
+                }
+            });
+
+            // Event Listener for the Back to Form Button
+            backToFormBtn.addEventListener('click', () => {
+                previewSection.classList.add('hidden');
+                formSection.classList.remove('hidden');
+                shareMessage.classList.add('hidden'); // Hide any previous share messages
+            });
+
+            // Event Listener for the Share Button
+            shareBtn.addEventListener('click', async () => {
+                if (navigator.share) {
+                    try {
+                        const dataURL = letterCanvas.toDataURL('image/png');
+                        const blob = await (await fetch(dataURL)).blob();
+                        const file = new File([blob], 'leave_letter.png', { type: 'image/png' });
+
+                        await navigator.share({
+                            title: 'Leave Application', // Changed title to reflect application type
+                            text: 'Here is my generated leave application.', // Changed text
+                            files: [file],
+                        });
+                        shareMessage.textContent = 'Application shared successfully!';
+                        shareMessage.classList.remove('hidden');
+                    } catch (error) {
+                        console.error('Error sharing:', error);
+                        shareMessage.textContent = 'Failed to share application. Your browser might not support sharing files, or you cancelled the share.';
+                        shareMessage.classList.remove('hidden');
+                    }
+                } else {
+                    shareMessage.textContent = 'Web Share API is not supported in this browser. Please use the Download button instead.';
+                    shareMessage.classList.remove('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
