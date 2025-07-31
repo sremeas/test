@@ -12,6 +12,9 @@
     <!-- Font Awesome CDN for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Import Google Fonts for Canvas rendering */
+        @import url('https://fonts.googleapis.com/css2?family=Moul&family=Koh+Santepheap&display=swap');
+
         /* Custom styles to ensure no vertical scroll and better mobile experience */
         body {
             font-family: 'Inter', sans-serif; /* Fallback, but canvas uses specific fonts */
@@ -337,7 +340,7 @@
                 return currentY; // Return the new Y position after drawing
             };
 
-            const generateLetterImage = () => {
+            const generateLetterImage = async () => { // Made async to await font loading
                 // Get the canvas context inside the function to ensure it's always available
                 const ctx = letterCanvas.getContext('2d');
 
@@ -346,6 +349,20 @@
                 shareBtn.classList.add('hidden'); // Hide share button initially
                 backToFormBtn.classList.add('hidden'); // Hide back button initially
                 shareMessage.classList.add('hidden'); // Hide share message
+
+                // Load custom fonts before drawing
+                try {
+                    await Promise.all([
+                        document.fonts.load('36px "Moul"'),
+                        document.fonts.load('24px "Koh Santepheap"')
+                    ]);
+                    console.log('Fonts loaded successfully!');
+                } catch (e) {
+                    console.error('Font loading failed:', e);
+                    // Fallback to default fonts if custom fonts fail to load
+                    // You might want to display a message to the user here
+                }
+
 
                 // Get form values
                 const name = document.getElementById('name').value;
