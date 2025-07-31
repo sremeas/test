@@ -36,16 +36,25 @@
                 overflow-y: hidden; /* No vertical scroll on larger screens */
             }
         }
-        .form-section, .preview-section {
+        .form-section {
             flex: 1;
-            padding: 1rem;
+            padding: 20px 25px 20px 25px; /* Changed padding */
             overflow-y: auto; /* Allow scrolling within sections if content is too long */
             box-sizing: border-box;
             -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            margin: 0; /* Changed margin to 0 */
         }
-        .form-section {
-            margin-bottom: 0; /* Remove margin between form and preview on small screens */
-            /* Removed max-height: 50vh; */
+        .preview-section {
+            flex: 1;
+            padding-top: 0; /* Removed top padding */
+            padding-right: 25px;
+            padding-bottom: 20px;
+            padding-left: 25px;
+            overflow-y: auto; /* Allow scrolling within sections if content is too long */
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            align-items: center; /* Center horizontally */
+            justify-content: flex-start; /* Align to the top */
         }
         @media (min-width: 768px) {
             .form-section {
@@ -130,7 +139,7 @@
             -webkit-appearance: none; /* For iOS Safari */
             -moz-appearance: none;    /* For Firefox */
             appearance: none;         /* Standard property */
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpolygon%20points%3D%22225.813%2C48.907%20128%2C146.72%2030.187%2C48.907%200%2C79.093%20128%2C207.093%20256%2C79.093%20225.813%2C48.907%22%3E%2Fpolygon%3E%3C%2Fsvg%3E'); /* Transparent SVG to hide native arrow */
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpolygon%20points%3D%22225.813%2C48.907%20128%2C146.72%2030.187%2C48.907%200%2C79.093%20128%2C207.093%20256%2C79.093%20225.813%2C48.907%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E'); /* Transparent SVG to hide native arrow */
             background-repeat: no-repeat;
             background-position: right 0.75rem center;
             background-size: 0.8em auto;
@@ -162,11 +171,10 @@
     <div class="container bg-white md:flex-row md:max-w-full md:h-full">
         <!-- Form Section -->
         <div id="formSection" class="form-section p-6 bg-gray-50 flex flex-col">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Leave Details</h2>
+            <h2 class="text-2xl font-bold text-gray-800 m-0 mb-2.5 text-center">Leave Details</h2>
 
-            <!-- Type of Absence Switch - Label above, switch centered below -->
-            <div class="mb-6 flex flex-col items-center">
-                <label class="block text-lg font-semibold text-gray-800 mb-2 text-center">Select Absence Type:</label>
+            <!-- Type of Absence Switch - Label removed, switch centered -->
+            <div class="mb-5 flex flex-col items-center">
                 <div class="relative inline-block w-36 h-10 select-none transition duration-200 ease-in-out">
                     <input type="checkbox" id="absenceTypeSwitch" name="absenceTypeSwitch" class="absolute block w-full h-full cursor-pointer opacity-0 z-10">
                     <label for="absenceTypeSwitch" class="toggle-label block overflow-hidden cursor-pointer rounded-md bg-gray-300 h-full shadow-inner"></label>
@@ -219,7 +227,7 @@
                 <div class="flex items-center">
                     <label for="backDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">Back to Work Date:</label>
                     <input type="date" id="backDate" name="backDate" required
-                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:focus:border-blue-500 sm:text-sm">
                 </div>
                 <div>
                     <input type="text" id="reason" name="reason" required placeholder="Reason for absence"
@@ -234,8 +242,8 @@
         </div>
 
         <!-- Preview Section -->
-        <div id="previewSection" class="preview-section p-6 bg-white flex flex-col items-center justify-center hidden">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Preview</h2>
+        <div id="previewSection" class="preview-section p-6 bg-white flex flex-col items-center hidden">
+            <h2 class="text-2xl font-bold text-gray-800 m-0 mb-2.5 text-center">Preview</h2>
             <div id="loadingOverlay" class="loading-overlay hidden">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
             </div>
@@ -357,9 +365,10 @@
                 letterCanvas.width = canvasWidth;
                 letterCanvas.height = canvasHeight;
 
-                // Ensure the canvas is displayed at its original size but rendered at higher res
-                letterCanvas.style.width = (canvasWidth / scaleFactor) + 'px';
-                letterCanvas.style.height = (canvasHeight / scaleFactor) + 'px';
+                // Ensure the canvas is displayed as a square in preview, but rendered at higher res
+                // This will stretch the image vertically in the preview.
+                letterCanvas.style.width = '400px';
+                letterCanvas.style.height = '422px';
 
 
                 // Clear canvas and set background
@@ -387,20 +396,20 @@
 
                 const margin = 50 * scaleFactor;
                 let yPos = headerHeight + margin; // Start content below the header
-                const lineHeight = 30 * scaleFactor; // Adjusted for Khmer script
-                const paragraphSpacing = 20 * scaleFactor;
+                const lineHeight = 25 * scaleFactor; // Decreased line height
+                const paragraphSpacing = 15 * scaleFactor; // Decreased paragraph spacing
 
                 // Current Date (Khmer format)
                 const currentDateKhmer = formatKhmerDate(new Date().toISOString().slice(0,10)); // Get today's date in YYYY-MM-DD format first
                 ctx.font = `${20 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
                 ctx.textAlign = 'right';
                 ctx.fillText(`ថ្ងៃខែឆ្នាំ: ${currentDateKhmer}`, canvasWidth - margin, yPos);
-                yPos += lineHeight * 2;
+                yPos += lineHeight * 1.5; // Decreased line break after date
 
                 ctx.textAlign = 'left';
                 ctx.font = `${22 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
                 ctx.fillText('សូមគោរពជូនលោកប្រធាន/នាយក', margin, yPos);
-                yPos += lineHeight * 1.5;
+                yPos += lineHeight * 1; // Decreased line break
 
                 // Dynamic Name, Sex, Position
                 const genderPrefix = sex === 'Male' ? 'ខ្ញុំបាទ' : (sex === 'Female' ? 'នាងខ្ញុំ' : '');
@@ -430,13 +439,13 @@
                 const reasonMaxWidth = canvasWidth - (2 * margin);
                 const reasonLineHeight = 25 * scaleFactor; // Slightly smaller line height for reason
                 yPos = wrapText(ctx, reason, margin, yPos, reasonMaxWidth, reasonLineHeight);
-                yPos += paragraphSpacing * 2;
+                yPos += paragraphSpacing * 1.5; // Decreased paragraph spacing
 
                 // Closing remarks
                 ctx.fillText('សេចក្តីដូចបានជម្រាបជូនខាងលើ សូមលោកប្រធាន/នាយក មេត្តាអនុញ្ញាតដោយក្តីអនុគ្រោះ។', margin, yPos);
-                yPos += lineHeight * 2;
+                yPos += lineHeight * 1.5; // Decreased line break
                 ctx.fillText('សូមលោកប្រធាន/នាយក ទទួលការគួរសមដ៏ខ្ពង់ខ្ពស់ពីខ្ញុំបាទ/នាងខ្ញុំ។', margin, yPos);
-                yPos += lineHeight * 3;
+                yPos += lineHeight * 2; // Decreased line break
 
                 ctx.textAlign = 'right';
                 ctx.fillText(`ដោយសេចក្តីគោរព`, canvasWidth - margin, yPos);
