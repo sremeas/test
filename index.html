@@ -3,564 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leave Letter Generator</title>
-    <!-- Favicon and App Icons -->
-    <link rel="icon" href="favicon.png" type="image/png">
-    <link rel="apple-touch-icon" href="favicon.png">
-    <!-- Tailwind CSS CDN -->
+    <title>Interactive Soil pH and Nutrient Availability Chart</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome CDN for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Import Google Fonts for Canvas rendering */
-        @import url('https://fonts.googleapis.com/css2?family=Moul&family=Koh+Santepheap&display=swap');
-
-        /* Custom styles to ensure no vertical scroll and better mobile experience */
         body {
-            font-family: 'Inter', sans-serif; /* Fallback, but canvas uses specific fonts */
-            overflow: hidden; /* Prevent vertical scrolling on the body */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh; /* Ensure it takes full viewport height */
-            background-color: #f0f4f8;
-            margin: 0; /* Remove default body margin */
-            padding: 0; /* Remove default body padding */
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tailwind gray-50 */
         }
-        .container {
-            display: flex;
-            flex-direction: column;
+        .chart-bar-inner {
+            transition: height 0.3s ease-in-out;
+        }
+        /* Custom scrollbar for a cleaner look */
+        .horizontal-scrollbar::-webkit-scrollbar {
+            height: 8px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; /* gray-100 */
+            border-radius: 10px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* gray-300 */
+            border-radius: 10px;
+        }
+        .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* gray-400 */
+        }
+
+        /* --- Custom Styles for a Larger Slider --- */
+        #ph-slider {
+            -webkit-appearance: none;
+            appearance: none;
             width: 100%;
-            height: 100vh; /* Full viewport height for the container */
-            /* Removed overflow-y: auto; */
-            padding: 0; /* Remove container padding */
-            box-sizing: border-box;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 9999px;
+            outline: none;
+            opacity: 0.9;
+            transition: opacity .2s;
         }
-        @media (min-width: 768px) {
-            .container {
-                flex-direction: row; /* Side-by-side on larger screens */
-                overflow-y: hidden; /* No vertical scroll on larger screens */
-            }
+
+        #ph-slider:hover {
+            opacity: 1;
         }
-        .form-section {
-            flex: 1;
-            padding: 20px 25px 20px 25px; /* Changed padding */
-            overflow-y: auto; /* Allow scrolling within sections if content is too long */
-            box-sizing: border-box;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-            margin: 0; /* Changed margin to 0 */
+
+        #ph-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
         }
-        .preview-section {
-            flex: 1;
-            padding-top: 40px; /* Added top padding to create space from phone's navigation */
-            padding-right: 25px;
-            padding-bottom: 20px;
-            padding-left: 25px;
-            overflow-y: auto; /* Allow scrolling within sections if content is too long */
-            box-sizing: border-box;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-            align-items: center; /* Center horizontally */
-            justify-content: flex-start; /* Align to the top */
+
+        #ph-slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
         }
-        @media (min-width: 768px) {
-            .form-section {
-                margin-right: 0; /* Remove margin between sections on larger screens */
-                margin-bottom: 0;
-                /* Removed max-height: none; */
-            }
-        }
-        canvas {
-            border: 1px solid #cbd5e0;
-            background-color: #ffffff;
-            display: block;
-            max-width: 100%;
-            height: auto; /* Maintain aspect ratio */
-            border-radius: 0; /* Remove rounded corners */
-        }
-        .loading-overlay {
-            position: absolute;
+
+        /* Styles for the orientation overlay */
+        #orientation-overlay {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.95);
+            z-index: 50;
+            display: none; /* Hidden by default */
             align-items: center;
-            z-index: 1000;
-            border-radius: 0; /* Remove rounded corners */
-        }
-        /* Styles for the toggle switch */
-        .toggle-label {
-            transition: background-color 0.2s ease-in-out;
-            position: relative;
-        }
-        .toggle-label::before {
-            content: '';
-            position: absolute;
-            display: block;
-            width: 50%;
-            height: 100%;
-            background-color: #3B82F6; /* Blue for Leave */
-            border-radius: 0.375rem; /* Decreased roundness: rounded-md */
-            transition: transform 0.2s ease-in-out;
-            left: 0;
-        }
-        #absenceTypeSwitch:checked + .toggle-label::before {
-            background-color: #22C55E; /* Green for Day Off */
-            transform: translateX(100%);
-        }
-        .toggle-text {
-            pointer-events: none; /* Allow clicks to pass through to the checkbox */
+            justify-content: center;
             text-align: center;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 0.75rem; /* px-3 */
-            color: white;
-            font-weight: bold;
-            font-size: 0.875rem; /* text-sm */
         }
-        .toggle-text span:first-child { /* "Leave" text */
-            opacity: 1;
-            transition: opacity 0.2s ease-in-out;
+
+        /* Simple animation for the rotation icon */
+        @keyframes rotate-icon {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+            100% { transform: rotate(-90deg); }
         }
-        #absenceTypeSwitch:checked ~ .toggle-text span:first-child {
-            opacity: 0;
-        }
-        .toggle-text span:last-child { /* "Day Off" text */
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-        }
-        #absenceTypeSwitch:checked ~ .toggle-text span:last-child {
-            opacity: 1;
-        }
-        /* Custom style to remove default dropdown arrow for select elements */
-        select.no-arrow {
-            -webkit-appearance: none; /* For iOS Safari */
-            -moz-appearance: none;    /* For Firefox */
-            appearance: none;         /* Standard property */
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpolygon%20points%3D%22225.813%2C48.907%20128%2C146.72%2030.187%2C48.907%200%2C79.093%20128%2C207.093%20256%2C79.093%20225.813%2C48.907%22%3E%3C%2Fpolygon%3E%3C%2Fsvg%3E'); /* Transparent SVG to hide native arrow */
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 0.8em auto;
-            padding-right: 2.5rem; /* Ensure enough padding for the custom background to cover the arrow */
-        }
-        select.no-arrow::-ms-expand { /* For IE/Edge */
-            display: none;
-        }
-        /* Style for all placeholders */
-        ::placeholder {
-            color: #000000; /* Black color for all placeholders */
-            opacity: 1; /* Ensure placeholder is not transparent */
-        }
-        /* Style for the disabled/hidden option in select to act as placeholder */
-        select option[disabled][selected] {
-            color: #000000; /* Black color for select placeholder */
-        }
-        /* Ensure select text color is black when placeholder is active */
-        select:required:invalid {
-            color: #000000;
-        }
-        /* Ensure select text color is black when a valid option is selected */
-        select:required:valid {
-            color: #000000;
-        }
-        /* Read-only input styling */
-        input[readonly], textarea[readonly] {
-            background-color: #e5e7eb; /* Tailwind gray-200 */
-            cursor: not-allowed;
+        .rotate-animation {
+            animation: rotate-icon 2.5s infinite ease-in-out;
         }
     </style>
 </head>
-<body>
-    <div class="container bg-white md:flex-row md:max-w-full md:h-full">
-        <!-- Form Section -->
-        <div id="formSection" class="form-section p-6 bg-gray-50 flex flex-col">
-            <h2 class="text-2xl font-bold text-gray-800 m-0 mb-2.5 text-center">Absence Form Generator</h2>
+<body class="bg-gray-100 flex items-center justify-center p-2 sm:p-4">
 
-            <!-- Type of Absence Switch - Label above, switch centered below -->
-            <div class="mb-5 flex flex-col items-center">
-                <label class="block text-lg font-semibold text-gray-800 mb-2 text-center">Select Absence Type:</label>
-                <div class="relative inline-block w-36 h-10 select-none transition duration-200 ease-in-out">
-                    <input type="checkbox" id="absenceTypeSwitch" name="absenceTypeSwitch" class="absolute block w-full h-full cursor-pointer opacity-0 z-10">
-                    <label for="absenceTypeSwitch" class="toggle-label block overflow-hidden cursor-pointer rounded-md bg-gray-300 h-full shadow-inner"></label>
-                    <div class="toggle-text">
-                        <span>Leave</span>
-                        <span>Day Off</span>
-                    </div>
-                </div>
-            </div>
-            <!-- End Type of Absence Switch -->
+    <!-- Orientation Overlay -->
+    <div id="orientation-overlay">
+        <div class="flex flex-col items-center">
+             <!-- SVG Icon for rotation -->
+            <svg class="w-16 h-16 text-indigo-500 mb-4 rotate-animation" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c-2.483 0-4.5 2.017-4.5 4.5s2.017 4.5 4.5 4.5 4.5-2.017 4.5-4.5-2.017-4.5-4.5-4.5zm0 0V7.5m0 4.5H15" />
+            </svg>
+            <h2 class="text-xl font-bold text-gray-800">Please Rotate Your Device</h2>
+            <p class="text-gray-600 mt-2">For the best experience, please view this chart in landscape mode.</p>
+        </div>
+    </div>
 
-            <form id="leaveForm" class="space-y-4 flex-grow">
-                <div class="flex flex-col sm:flex-row sm:space-x-4">
-                    <div class="flex-1 mb-4 sm:mb-0">
-                        <input type="text" id="name" name="name" required placeholder="Name"
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                    <div class="flex-1">
-                        <select id="sex" name="sex" required
-                                class="no-arrow mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="" disabled selected hidden>Select Sex</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:space-x-4">
-                    <div class="flex-1 mb-4 sm:mb-0">
-                        <input type="text" id="position" name="position" required placeholder="Position"
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
-                    <div class="flex-1">
-                        <input type="number" id="absence" name="absence" min="1" required placeholder="Absence Days"
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                               inputmode="numeric">
-                    </div>
-                </div>
-                <!-- Start Date field -->
-                <div class="flex items-center">
-                    <label for="startDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">Start Date:</label>
-                    <input type="date" id="startDate" name="startDate" required
-                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                <!-- To Date field -->
-                <div class="flex items-center">
-                    <label for="toDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">To Date:</label>
-                    <input type="date" id="toDate" name="toDate" required
-                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                <!-- Back to Work Date field -->
-                <div class="flex items-center">
-                    <label for="backDate" class="text-sm font-medium text-gray-700 w-1/2 min-w-[120px]">Back to Work Date:</label>
-                    <input type="date" id="backDate" name="backDate" required
-                           class="flex-1 ml-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:focus:border-blue-500 sm:text-sm">
-                </div>
-                <div>
-                    <input type="text" id="reason" name="reason" required placeholder="Reason for absence"
-                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                </div>
-                <button type="button" id="previewBtn"
-                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md flex items-center justify-center space-x-2">
-                    <i class="fas fa-eye w-5 h-5"></i>
-                    <span>Preview</span>
-                </button>
-            </form>
+    <div id="app-content" class="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Soil pH and Nutrient Availability</h1>
+            <p class="text-sm text-gray-500 mt-1">Adjust the pH slider to see how nutrient availability changes.</p>
         </div>
 
-        <!-- Preview Section -->
-        <div id="previewSection" class="preview-section p-6 bg-white flex flex-col items-center hidden">
-            <h2 class="text-2xl font-bold text-gray-800 m-0 mb-2.5 text-center">Preview</h2>
-            <div id="loadingOverlay" class="loading-overlay hidden">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <!-- pH Slider Controls -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-xl">
+            <label for="ph-slider" class="block text-base sm:text-lg font-semibold text-gray-700 mb-2">
+                Soil pH: <span id="ph-value" class="font-bold text-indigo-600 text-lg sm:text-xl">6.5</span>
+            </label>
+            <input id="ph-slider" type="range" min="4.0" max="10.0" value="6.5" step="0.1">
+            <div class="flex justify-between text-xs text-gray-500 mt-2">
+                <span>4.0</span>
+                <span>5.0</span>
+                <span>6.0</span>
+                <span>7.0</span>
+                <span>8.0</span>
+                <span>9.0</span>
+                <span>10.0</span>
             </div>
-            <canvas id="letterCanvas" class="w-full h-auto max-h-full"></canvas>
-            <div class="mt-4 w-full flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <a id="downloadLink" download="leave_letter.png"
-                   class="inline-flex items-center justify-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md text-center">
-                    <i class="fas fa-download w-5 h-5 mr-2"></i>
-                    <span>Download</span>
-                </a>
-                <button type="button" id="shareBtn"
-                        class="inline-flex items-center justify-center bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md">
-                    <i class="fas fa-share-alt w-5 h-5 mr-2"></i>
-                    <span>Share</span>
-                </button>
-                <button type="button" id="backToFormBtn"
-                        class="inline-flex items-center justify-center bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition duration-150 ease-in-out shadow-md">
-                    <i class="fas fa-arrow-left w-5 h-5 mr-2"></i>
-                    <span>Back to Form</span>
-                </button>
+             <div class="flex justify-between text-xs sm:text-sm font-medium text-gray-600 mt-3 border-t pt-3">
+                <span class="w-1/2 text-center text-orange-600">RANGE OF ACIDITY</span>
+                <span class="w-1/2 text-center text-blue-600">RANGE OF ALKALINITY</span>
             </div>
-            <div id="shareMessage" class="mt-4 text-sm text-gray-600 hidden"></div>
+        </div>
+
+        <!-- Nutrient Chart Wrapper for horizontal scrolling -->
+        <div class="w-full overflow-x-auto horizontal-scrollbar rounded-lg bg-slate-50 p-3">
+            <div id="nutrient-chart" class="flex flex-row flex-nowrap items-end min-h-[224px] w-max mx-auto gap-x-3">
+                <!-- Nutrient bars will be dynamically inserted here -->
+            </div>
+        </div>
+        
+        <!-- Data Sources Section -->
+        <div class="mt-4 text-center border-t pt-3">
+             <p class="text-xs text-gray-500">
+                 Source: <a href="https://www.nrcs.usda.gov/sites/default/files/2022-10/Soil%20PH.pdf" target="_blank" class="text-blue-600 hover:underline">USDA / NRCS - Soil pH</a>
+             </p>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const formSection = document.getElementById('formSection');
-            const previewSection = document.getElementById('previewSection');
-            const previewBtn = document.getElementById('previewBtn');
-            const letterCanvas = document.getElementById('letterCanvas');
-            const downloadLink = document.getElementById('downloadLink');
-            const shareBtn = document.getElementById('shareBtn');
-            const backToFormBtn = document.getElementById('backToFormBtn');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            const shareMessage = document.getElementById('shareMessage');
-            const reasonInput = document.getElementById('reason'); // Get reason input
-            const absenceTypeSwitch = document.getElementById('absenceTypeSwitch'); // Get switch
+        const nutrientData = [
+            { name: 'N', color: '#4CAF50', min: 5.8, peakStart: 6.2, peakEnd: 8.2, max: 9.0 },
+            { name: 'P', color: '#E91E63', min: 6.0, peakStart: 6.5, peakEnd: 7.2, max: 8.5 },
+            { name: 'K', color: '#9C27B0', min: 5.8, peakStart: 6.0, peakEnd: 9.5, max: 10.0 },
+            { name: 'S', color: '#3F51B5', min: 5.8, peakStart: 6.0, peakEnd: 9.5, max: 10.0 },
+            { name: 'Ca', color: '#2196F3', min: 6.3, peakStart: 6.8, peakEnd: 9.0, max: 9.5 },
+            { name: 'Mg', color: '#FF9800', min: 6.3, peakStart: 6.8, peakEnd: 9.0, max: 9.5 },
+            { name: 'Fe', color: '#795548', min: 4.0, peakStart: 4.0, peakEnd: 6.0, max: 8.0 },
+            { name: 'Mn', color: '#673AB7', min: 4.5, peakStart: 5.0, peakEnd: 6.5, max: 8.0 },
+            { name: 'B', color: '#00695C', min: 5.0, peakStart: 5.0, peakEnd: 7.0, max: 8.5 },
+            { name: 'Cu', color: '#B71C1C', min: 5.0, peakStart: 5.2, peakEnd: 7.0, max: 8.0 },
+            { name: 'Zn', color: '#D84315', min: 5.0, peakStart: 5.2, peakEnd: 7.0, max: 8.0 },
+            { name: 'Mo', color: '#00BCD4', min: 6.5, peakStart: 7.0, peakEnd: 9.5, max: 10.0 }
+        ];
 
-            // Function to convert Arabic numerals to Khmer numerals
-            const convertToKhmerNumerals = (num) => {
-                const arabicNumerals = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-                const khmerNumerals = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
-                return String(num).split('').map(digit => {
-                    const index = arabicNumerals.indexOf(digit);
-                    return index !== -1 ? khmerNumerals[index] : digit;
-                }).join('');
-            };
+        const phSlider = document.getElementById('ph-slider');
+        const phValueDisplay = document.getElementById('ph-value');
+        const chartContainer = document.getElementById('nutrient-chart');
+        const orientationOverlay = document.getElementById('orientation-overlay');
+        const appContent = document.getElementById('app-content');
 
-            // Function to format dates with Khmer numerals
-            const formatKhmerDate = (dateString) => {
-                const date = new Date(dateString);
-                const day = convertToKhmerNumerals(date.getDate().toString().padStart(2, '0'));
-                const year = convertToKhmerNumerals(date.getFullYear());
-                const monthNamesKhmer = [
-                    "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
-                    "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"
-                ];
-                const month = monthNamesKhmer[date.getMonth()];
-                return `${day}.${month}.${year}`;
-            };
+        function calculateAvailability(ph, nutrient) {
+            const { min, peakStart, peakEnd, max } = nutrient;
+            
+            if (ph >= peakStart && ph <= peakEnd) return 100;
+            if (ph > min && ph < peakStart) return ((ph - min) / (peakStart - min)) * 100;
+            if (ph > peakEnd && ph < max) return (1 - ((ph - peakEnd) / (max - peakEnd))) * 100;
+            return 0;
+        }
 
-            // Function to wrap text for the reason field
-            const wrapText = (context, text, x, y, maxWidth, lineHeight) => {
-                const words = text.split(' ');
-                let line = '';
-                let currentY = y;
+        function updateChart() {
+            const currentPh = parseFloat(phSlider.value);
+            phValueDisplay.textContent = currentPh.toFixed(1);
 
-                for (let n = 0; n < words.length; n++) {
-                    const testLine = line + words[n] + ' ';
-                    const metrics = context.measureText(testLine);
-                    const testWidth = metrics.width;
-                    if (testWidth > maxWidth && n > 0) {
-                        context.fillText(line, x, currentY);
-                        line = words[n] + ' ';
-                        currentY += lineHeight;
+            document.querySelectorAll('.nutrient-bar').forEach(bar => {
+                const nutrientName = bar.dataset.nutrient;
+                const nutrient = nutrientData.find(n => n.name === nutrientName);
+                if (nutrient) {
+                    const availability = calculateAvailability(currentPh, nutrient);
+                    const innerBar = bar.querySelector('.chart-bar-inner');
+                    innerBar.style.height = `${availability}%`;
+                    
+                    if (availability < 25) {
+                        innerBar.classList.add('opacity-50');
                     } else {
-                        line = testLine;
+                        innerBar.classList.remove('opacity-50');
                     }
                 }
-                context.fillText(line, x, currentY);
-                return currentY; // Return the new Y position after drawing
-            };
+            });
+        }
+        
+        function initializeChart() {
+            nutrientData.forEach(nutrient => {
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'nutrient-bar text-center flex flex-col items-center';
+                barWrapper.dataset.nutrient = nutrient.name;
 
-            const generateLetterImage = async () => { // Made async to await font loading
-                // Get the canvas context inside the function to ensure it's always available
-                const ctx = letterCanvas.getContext('2d');
-
-                loadingOverlay.classList.remove('hidden'); // Show loading overlay
-                downloadLink.classList.add('hidden'); // Hide download link initially
-                shareBtn.classList.add('hidden'); // Hide share button initially
-                backToFormBtn.classList.add('hidden'); // Hide back button initially
-                shareMessage.classList.add('hidden'); // Hide share message
-
-                // Load custom fonts before drawing
-                try {
-                    await Promise.all([
-                        document.fonts.load('36px "Moul"'),
-                        document.fonts.load('24px "Koh Santepheap"')
-                    ]);
-                    console.log('Fonts loaded successfully!');
-                } catch (e) {
-                    console.error('Font loading failed:', e);
-                    // Fallback to default fonts if custom fonts fail to load
-                    // You might want to display a message to the user here
-                }
-
-
-                // Get form values
-                const name = document.getElementById('name').value;
-                const sex = document.getElementById('sex').value;
-                const position = document.getElementById('position').value;
-                const absence = document.getElementById('absence').value;
-                const startDate = document.getElementById('startDate').value; // Get raw date string for formatting
-                const toDate = document.getElementById('toDate').value;     // Get raw date string for formatting
-                const backDate = document.getElementById('backDate').value; // Get raw date string for formatting
-                const reason = document.getElementById('reason').value;
+                const barContainer = document.createElement('div');
+                barContainer.className = 'w-8 sm:w-10 h-48 bg-gray-200 rounded-lg flex items-end';
                 
-                // Get absence type from the new switch
-                const absenceType = absenceTypeSwitch.checked ? 'Day Off' : 'Leave';
+                const innerBar = document.createElement('div');
+                innerBar.className = 'chart-bar-inner w-full rounded-lg';
+                innerBar.style.backgroundColor = nutrient.color;
+                
+                barContainer.appendChild(innerBar);
+                
+                const label = document.createElement('p');
+                label.className = 'text-base sm:text-lg font-bold text-gray-700 mt-2';
+                label.textContent = nutrient.name;
 
-                // Determine header color
-                let headerColor;
-                if (absenceType === 'Leave') {
-                    headerColor = '#3B82F6'; // Tailwind blue-500
-                } else {
-                    headerColor = '#22C55E'; // Tailwind green-500
-                }
-
-                // Define a scaling factor for higher quality
-                const scaleFactor = 2; // Render at 2x resolution
-
-                // Set canvas dimensions (scaled for higher quality)
-                const canvasWidth = 720 * scaleFactor;
-                const canvasHeight = 760 * scaleFactor;
-                letterCanvas.width = canvasWidth;
-                letterCanvas.height = canvasHeight;
-
-                // Ensure the canvas is displayed as a square in preview, but rendered at higher res
-                // This will stretch the image vertically in the preview.
-                letterCanvas.style.width = '400px';
-                letterCanvas.style.height = '422px';
-
-
-                // Clear canvas and set background
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                // Draw header rectangle
-                const headerHeight = 80 * scaleFactor;
-                ctx.fillStyle = headerColor;
-                ctx.fillRect(0, 0, canvasWidth, headerHeight);
-
-                // Set text properties for header (scaled font size)
-                ctx.fillStyle = '#ffffff'; // White text for header
-                ctx.font = `${36 * scaleFactor}px "Moul", "Inter", sans-serif`; // Changed to Moul
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${absenceType === 'Leave' ? 'លិខិតសុំច្បាប់' : 'ពាក្យសុំច្បាប់ឈប់សម្រាក'}`, canvasWidth / 2, headerHeight / 2);
-
-
-                // Set text properties for body content (scaled font size)
-                ctx.fillStyle = '#333333';
-                ctx.font = `${24 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
-                ctx.textBaseline = 'top';
-
-                const margin = 50 * scaleFactor;
-                let yPos = headerHeight + margin; // Start content below the header
-                const lineHeight = 25 * scaleFactor; // Decreased line height
-                const paragraphSpacing = 15 * scaleFactor; // Decreased paragraph spacing
-
-                // Current Date (Khmer format)
-                const currentDateKhmer = formatKhmerDate(new Date().toISOString().slice(0,10)); // Get today's date in YYYY-MM-DD format first
-                ctx.font = `${20 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
-                ctx.textAlign = 'right';
-                ctx.fillText(`ថ្ងៃខែឆ្នាំ: ${currentDateKhmer}`, canvasWidth - margin, yPos);
-                yPos += lineHeight * 1.5; // Decreased line break after date
-
-                ctx.textAlign = 'left';
-                ctx.font = `${22 * scaleFactor}px "Koh Santepheap", "Inter", sans-serif`; // Changed to Koh Santepheap
-                ctx.fillText('សូមគោរពជូនលោកប្រធាន/នាយក', margin, yPos);
-                yPos += lineHeight * 1; // Decreased line break
-
-                // Dynamic Name, Sex, Position
-                const genderPrefix = sex === 'Male' ? 'ខ្ញុំបាទ' : (sex === 'Female' ? 'នាងខ្ញុំ' : '');
-                ctx.fillText(`ឈ្មោះ/នាមត្រកូល: ${name}`, margin, yPos);
-                yPos += lineHeight;
-                ctx.fillText(`ភេទ: ${sex}`, margin, yPos);
-                yPos += lineHeight;
-                ctx.fillText(`តួនាទី: ${position}`, margin, yPos);
-                yPos += lineHeight + paragraphSpacing;
-
-                // Main body of the letter in Khmer
-                ctx.fillText(`${genderPrefix} សូមអនុញ្ញាតឈប់សម្រាកចំនួន ${convertToKhmerNumerals(absence)} ថ្ងៃ។`, margin, yPos);
-                yPos += lineHeight;
-
-                ctx.fillText(`ចាប់ពីថ្ងៃទី: ${formatKhmerDate(startDate)}`, margin, yPos);
-                yPos += lineHeight;
-                ctx.fillText(`ដល់ថ្ងៃទី: ${formatKhmerDate(toDate)}`, margin, yPos);
-                yPos += lineHeight;
-                ctx.fillText(`ចូលធ្វើការវិញថ្ងៃទី: ${formatKhmerDate(backDate)}`, margin, yPos);
-                yPos += lineHeight + paragraphSpacing;
-
-                const reasonIntro = `មូលហេតុ:`;
-                ctx.fillText(reasonIntro, margin, yPos);
-                yPos += lineHeight;
-
-                // Wrap and draw the reason text
-                const reasonMaxWidth = canvasWidth - (2 * margin);
-                const reasonLineHeight = 25 * scaleFactor; // Slightly smaller line height for reason
-                yPos = wrapText(ctx, reason, margin, yPos, reasonMaxWidth, reasonLineHeight);
-                yPos += paragraphSpacing * 1.5; // Decreased paragraph spacing
-
-                // Closing remarks
-                ctx.fillText('សេចក្តីដូចបានជម្រាបជូនខាងលើ សូមលោកប្រធាន/នាយក មេត្តាអនុញ្ញាតដោយក្តីអនុគ្រោះ។', margin, yPos);
-                yPos += lineHeight * 1.5; // Decreased line break
-                ctx.fillText('សូមលោកប្រធាន/នាយក ទទួលការគួរសមដ៏ខ្ពង់ខ្ពស់ពីខ្ញុំបាទ/នាងខ្ញុំ។', margin, yPos);
-                yPos += lineHeight * 2; // Decreased line break
-
-                ctx.textAlign = 'right';
-                ctx.fillText(`ដោយសេចក្តីគោរព`, canvasWidth - margin, yPos);
-                yPos += lineHeight;
-                ctx.fillText(`${name}`, canvasWidth - margin, yPos); // Name at the end
-                yPos += lineHeight;
-                ctx.fillText(`${position}`, canvasWidth - margin, yPos); // Position at the end
-
-
-                // After drawing, convert to image and display
-                try {
-                    const dataURL = letterCanvas.toDataURL('image/png');
-                    downloadLink.href = dataURL;
-                    downloadLink.classList.remove('hidden'); // Show download link
-                    shareBtn.classList.remove('hidden'); // Show share button
-                    backToFormBtn.classList.remove('hidden'); // Show back button
-                } catch (error) {
-                    console.error("Error generating image:", error);
-                    shareMessage.textContent = "Failed to generate image. Please try again.";
-                    shareMessage.classList.remove('hidden');
-                } finally {
-                    loadingOverlay.classList.add('hidden'); // Hide loading overlay
-                }
-            };
-
-            // Event Listener for the Preview Button
-            previewBtn.addEventListener('click', () => {
-                if (document.getElementById('leaveForm').checkValidity()) {
-                    formSection.classList.add('hidden');
-                    previewSection.classList.remove('hidden');
-                    // Scroll preview section to top
-                    previewSection.scrollTop = 0;
-                    generateLetterImage();
-                } else {
-                    // Trigger browser's default validation UI
-                    document.getElementById('leaveForm').reportValidity();
-                }
+                barWrapper.appendChild(barContainer);
+                barWrapper.appendChild(label);
+                chartContainer.appendChild(barWrapper);
             });
+        }
 
-            // Event Listener for the Back to Form Button
-            backToFormBtn.addEventListener('click', () => {
-                previewSection.classList.add('hidden');
-                formSection.classList.remove('hidden');
-                shareMessage.classList.add('hidden'); // Hide any previous share messages
-            });
+        // --- Orientation Check Logic ---
+        function checkOrientation() {
+            // Check if the screen is in portrait mode (height is greater than width)
+            const isPortrait = window.innerHeight > window.innerWidth;
+            
+            if (isPortrait) {
+                orientationOverlay.style.display = 'flex';
+                appContent.style.display = 'none';
+            } else {
+                orientationOverlay.style.display = 'none';
+                appContent.style.display = 'block';
+            }
+        }
 
-            // Event listener for the Absence Type Switch
-            absenceTypeSwitch.addEventListener('change', () => {
-                if (absenceTypeSwitch.checked) { // If switch is checked, it's "Day Off"
-                    reasonInput.value = "Day Off";
-                    reasonInput.readOnly = true;
-                    reasonInput.classList.add('bg-gray-200'); // Add Tailwind gray-200 class
-                } else { // If switch is unchecked, it's "Leave"
-                    reasonInput.value = ""; // Clear the reason
-                    reasonInput.readOnly = false;
-                    reasonInput.classList.remove('bg-gray-200'); // Remove Tailwind gray-200 class
-                }
-            });
 
-            // Event Listener for the Share Button
-            shareBtn.addEventListener('click', async () => {
-                if (navigator.share) {
-                    try {
-                        const dataURL = letterCanvas.toDataURL('image/png');
-                        const blob = await (await fetch(dataURL)).blob();
-                        const file = new File([blob], 'leave_letter.png', { type: 'image/png' });
+        phSlider.addEventListener('input', updateChart);
 
-                        await navigator.share({
-                            title: 'Leave Application', // Changed title to reflect application type
-                            text: 'Here is my generated leave application.', // Changed text
-                            files: [file],
-                        });
-                        shareMessage.textContent = 'Application shared successfully!';
-                        shareMessage.classList.remove('hidden');
-                    } catch (error) {
-                        console.error('Error sharing:', error);
-                        shareMessage.textContent = 'Failed to share application. Your browser might not support sharing files, or you cancelled the share.';
-                        shareMessage.classList.remove('hidden');
-                    }
-                } else {
-                    shareMessage.textContent = 'Web Share API is not supported in this browser. Please use the Download button instead.';
-                    shareMessage.classList.remove('hidden');
-                }
-            });
+        // Check orientation on load and whenever the window is resized
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeChart();
+            updateChart();
+            checkOrientation(); // Initial check
         });
+
     </script>
+
 </body>
 </html>
